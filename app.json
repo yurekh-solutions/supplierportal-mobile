@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "name": "RitzYard Seller",
+    "slug": "ritzyard-seller",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "ritzyard-seller",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": false,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#C94F31"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ritzyard.seller"
+    },
+    "android": {
+      "package": "com.ritzyard.seller",
+      "versionCode": 1,
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "output": "static",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app needs access to your photos to upload product images and company logos.",
+          "cameraPermission": "The app needs access to your camera to take product photos."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": ""
+      }
+    }
+  }
+}
