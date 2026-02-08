@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "scheme": "ritzyard-seller",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "resizeMode": "contain",
       "backgroundColor": "#C94F31"
