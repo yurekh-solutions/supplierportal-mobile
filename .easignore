@@ -1,0 +1,18 @@
+# Build artifacts
+.expo/
+dist/
+node_modules/.cache/
+
+# IDE
+.vscode/
+.idea/
+
+# Git
+.git/
+.gitignore
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

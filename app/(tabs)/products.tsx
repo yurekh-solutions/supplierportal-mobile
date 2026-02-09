@@ -3,33 +3,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, useCallback } from 'react';
 import { getMyProducts } from '../../src/lib/api';
+import { getImageUrl } from '../../src/lib/imageUtils';
 import { colors, shadows, borderRadius } from '../../src/styles/colors';
-
-// Helper to sanitize and get the proper image URL
-const getImageUrl = (imageUrl: string | undefined | null): string | null => {
-  if (!imageUrl || imageUrl.trim() === '') return null;
-  
-  const API_BASE = process.env.EXPO_PUBLIC_API_URL?.replace('/api', '') || 'https://backendmatrix.onrender.com';
-  
-  // If URL contains filesystem paths like /opt/render/project/src/uploads/, extract just the /uploads/ part
-  if (imageUrl.includes('/uploads/')) {
-    const uploadsIndex = imageUrl.indexOf('/uploads/');
-    const cleanPath = imageUrl.substring(uploadsIndex);
-    return `${API_BASE}${cleanPath}`;
-  }
-  
-  // If it's a Cloudinary URL or other external URL, return as-is
-  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-    // Check if it's NOT a malformed URL with filesystem paths
-    if (!imageUrl.includes('/opt/') && !imageUrl.includes('/render/')) {
-      return imageUrl;
-    }
-  }
-  
-  // Relative URL - prepend API base
-  const cleanPath = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
-  return `${API_BASE}${cleanPath}`;
-};
+import { predefinedProducts, PRODUCT_IMAGES } from '../../src/data/products';
 
 // Product Image Component with error handling and retry logic
 const ProductImage = ({ imageUrl, style }: { imageUrl: string | undefined | null; style: any }) => {
@@ -115,24 +91,81 @@ export default function Products() {
     }
   };
 
-  const renderProduct = ({ item }: { item: any }) => (
-    <View style={styles.productCard}>
-      <ProductImage imageUrl={item.image} style={styles.productImage} />
-      <View style={styles.productInfo}>
-        <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
-        <Text style={styles.productCategory}>{item.category}</Text>
-        <View style={[
-          styles.statusBadge,
-          item.status === 'active' && styles.statusActive,
-          item.status === 'pending' && styles.statusPending,
-        ]}>
-          <Text style={styles.statusText}>
-            {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-          </Text>
+  const renderProduct = ({ item }: { item: any }) => {
+    // Try to find a matching predefined product for fallback image
+    const matchingPredefinedProduct = predefinedProducts.find(
+      p => p.name.toLowerCase() === item.name.toLowerCase()
+    );
+    
+    const fallbackImageKey = matchingPredefinedProduct?.imageKey;
+    const fallbackImage = fallbackImageKey ? PRODUCT_IMAGES[fallbackImageKey] : null;
+
+    return (
+      <View style={styles.productCard}>
+        {/* Use fallback image if database image is broken */}
+        {!item.image || getImageUrl(item.image) === null ? (
+          fallbackImage ? (
+            <Image 
+              source={fallbackImage}
+              style={styles.productImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <Ionicons name="cube-outline" size={40} color={colors.textLight} />
+            </View>
+          )
+        ) : (
+          <ProductImage imageUrl={item.image} style={styles.productImage} />
+        )}
+        
+        <View style={styles.productInfo}>
+          <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
+          <Text style={styles.productCategory}>{item.category}</Text>
+          <View style={[
+            styles.statusBadge,
+            item.status === 'active' && styles.statusActive,
+            item.status === 'pending' && styles.statusPending,
+          ]}>
+            <Text style={styles.statusText}>
+              {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+            </Text>
+          </View>
         </View>
       </View>
-    </View>
-  );
+    );
+  };
+
+  const renderPredefinedProduct = ({ item }: { item: any }) => {
+    const imageKey = item.imageKey;
+    const image = imageKey ? PRODUCT_IMAGES[imageKey] : null;
+
+    return (
+      <View style={styles.productCard}>
+        {image ? (
+          <Image 
+            source={image}
+            style={styles.productImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={styles.imagePlaceholder}>
+            <Ionicons name="cube-outline" size={40} color={colors.textLight} />
+          </View>
+        )}
+        
+        <View style={styles.productInfo}>
+          <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
+          <Text style={styles.productCategory}>{item.category}</Text>
+          <View style={[styles.statusBadge, { backgroundColor: colors.primary + '20' }]}>
+            <Text style={[styles.statusText, { color: colors.primary }]}>
+              Template
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -152,11 +185,15 @@ export default function Products() {
           <Text style={styles.loadingText}>Loading products...</Text>
         </View>
       ) : products.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="cube-outline" size={80} color={colors.textLight} />
-          <Text style={styles.emptyTitle}>No Products Yet</Text>
-          <Text style={styles.emptySubtitle}>Add your first product to start selling</Text>
-        </View>
+        <FlatList
+          data={predefinedProducts.slice(0, 8)}
+          keyExtractor={(item) => item.id}
+          renderItem={renderPredefinedProduct}
+          numColumns={2}
+          contentContainerStyle={styles.productList}
+          columnWrapperStyle={styles.row}
+          showsVerticalScrollIndicator={false}
+        />
       ) : (
         <FlatList
           data={products}

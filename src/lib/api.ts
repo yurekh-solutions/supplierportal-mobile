@@ -7,7 +7,7 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://backendmatrix.onrend
 // Create axios instance
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 30000,
+  timeout: 60000, // Increased from 30s to 60s for Render cold starts
   headers: {
     'Content-Type': 'application/json',
   },
@@ -56,10 +56,27 @@ api.interceptors.response.use(
 
 export const supplierLogin = async (email: string, password: string) => {
   try {
-    const response = await api.post('/auth/supplier/login', { email, password });
+    // Wake up the server first (if it's been sleeping)
+    console.log('⏰ Waking up server before login...');
+    await wakeUpServer();
+    console.log('✅ Server wake-up request sent');
+    
+    // Now attempt login with increased timeout for cold starts
+    const response = await api.post('/auth/supplier/login', { email, password }, {
+      timeout: 60000, // Increased to 60 seconds for cold start
+    });
     return response.data;
   } catch (error: any) {
     console.error('Login error:', error);
+    
+    // Handle timeout specifically
+    if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+      return { 
+        success: false, 
+        message: 'Login took too long. The server is starting up (this happens after 15 minutes of inactivity). Please try again in 30 seconds.' 
+      };
+    }
+    
     return { 
       success: false, 
       message: error.response?.data?.message || 'Login failed' 

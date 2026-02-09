@@ -18,6 +18,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getMyProducts } from '../lib/api';
 import { colors, gradients, shadows, borderRadius, spacing } from '../styles/colors';
 import { predefinedProducts, Product as DataProduct, PRODUCT_IMAGES } from '../data/products';
+import { getImageUrl } from '../lib/imageUtils';
 
 const { width } = Dimensions.get('window');
 
@@ -49,32 +50,6 @@ interface Product {
 interface DashboardScreenProps {
   navigation: any;
 }
-
-// Helper to sanitize and get the proper image URL
-const getImageUrl = (imageUrl: string | undefined | null): string | null => {
-  if (!imageUrl || imageUrl.trim() === '') return null;
-  
-  const API_BASE = process.env.EXPO_PUBLIC_API_URL?.replace('/api', '') || 'https://backendmatrix.onrender.com';
-  
-  // If URL contains filesystem paths like /opt/render/project/src/uploads/, extract just the /uploads/ part
-  if (imageUrl.includes('/uploads/')) {
-    const uploadsIndex = imageUrl.indexOf('/uploads/');
-    const cleanPath = imageUrl.substring(uploadsIndex);
-    return `${API_BASE}${cleanPath}`;
-  }
-  
-  // If it's a Cloudinary URL or other external URL, return as-is
-  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-    // Check if it's NOT a malformed URL with filesystem paths
-    if (!imageUrl.includes('/opt/') && !imageUrl.includes('/render/')) {
-      return imageUrl;
-    }
-  }
-  
-  // Relative URL - prepend API base
-  const cleanPath = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
-  return `${API_BASE}${cleanPath}`;
-};
 
 // Product Image Component with error handling and retry logic
 const ApiProductImage = ({ imageUrl, style, placeholderStyle }: { imageUrl: string | undefined | null; style: any; placeholderStyle?: any }) => {
@@ -232,39 +207,66 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
     </View>
   );
 
-  const ProductCard = ({ product }: { product: Product }) => (
-    <TouchableOpacity 
-      style={styles.productCard}
-      onPress={() => navigation.navigate('ProductDetail', { product })}
-    >
-      <ApiProductImage 
-        imageUrl={product.image} 
-        style={styles.productImage}
-        placeholderStyle={styles.productImagePlaceholder}
-      />
-      <View style={styles.productInfo}>
-        <View style={styles.productHeader}>
-          <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
-          <View style={[
-            styles.statusBadge,
-            product.status === 'active' && styles.statusActive,
-            product.status === 'pending' && styles.statusPending,
-            product.status === 'rejected' && styles.statusRejected,
-          ]}>
-            <Text style={[
-              styles.statusText,
-              product.status === 'active' && styles.statusTextActive,
-              product.status === 'pending' && styles.statusTextPending,
-              product.status === 'rejected' && styles.statusTextRejected,
+  const ProductCard = ({ product }: { product: Product }) => {
+    // Try to find a matching predefined product to use its image as fallback
+    const matchingPredefinedProduct = predefinedProducts.find(
+      p => p.name.toLowerCase() === product.name.toLowerCase()
+    );
+    
+    // Get the fallback image from predefined products if available
+    const fallbackImageKey = matchingPredefinedProduct?.imageKey;
+    const fallbackImage = fallbackImageKey ? PRODUCT_IMAGES[fallbackImageKey] : null;
+
+    return (
+      <TouchableOpacity 
+        style={styles.productCard}
+        onPress={() => navigation.navigate('ProductDetail', { product })}
+      >
+        {/* If database image is broken, use predefined product image */}
+        {!product.image || getImageUrl(product.image) === null ? (
+          fallbackImage ? (
+            <Image 
+              source={fallbackImage}
+              style={styles.productImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={[styles.productImage, styles.productImagePlaceholder]}>
+              <Ionicons name="cube-outline" size={40} color={COLORS.textLight} />
+            </View>
+          )
+        ) : (
+          <ApiProductImage 
+            imageUrl={product.image} 
+            style={styles.productImage}
+            placeholderStyle={styles.productImagePlaceholder}
+          />
+        )}
+        
+        <View style={styles.productInfo}>
+          <View style={styles.productHeader}>
+            <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
+            <View style={[
+              styles.statusBadge,
+              product.status === 'active' && styles.statusActive,
+              product.status === 'pending' && styles.statusPending,
+              product.status === 'rejected' && styles.statusRejected,
             ]}>
-              {product.status.charAt(0).toUpperCase() + product.status.slice(1)}
-            </Text>
+              <Text style={[
+                styles.statusText,
+                product.status === 'active' && styles.statusTextActive,
+                product.status === 'pending' && styles.statusTextPending,
+                product.status === 'rejected' && styles.statusTextRejected,
+              ]}>
+                {product.status.charAt(0).toUpperCase() + product.status.slice(1)}
+              </Text>
+            </View>
           </View>
+          <Text style={styles.productCategory}>{product.category}</Text>
         </View>
-        <Text style={styles.productCategory}>{product.category}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   const AutomationTool = ({ icon, title, subtitle, metric, metricColor, onPress }: any) => (
     <TouchableOpacity style={styles.automationCard} onPress={onPress}>
@@ -514,8 +516,9 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
           </View>
         </View>
 
-        {/* Business Automation Suite */}
-        <View style={styles.section}>
+        {/* Business Automation Suite - HIDDEN ON MOBILE */}
+        {/* Commented out: Will be visible on website only */}
+        {/* <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <LinearGradient
               colors={gradients.premium}
@@ -555,7 +558,7 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
               metric="+25%"
             />
           </View>
-        </View>
+        </View> */}
 
         {/* Recent Products */}
         <View style={styles.section}>
@@ -571,11 +574,13 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
               <Text style={styles.loadingText}>Loading products...</Text>
             </View>
           ) : products.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="cube-outline" size={60} color={COLORS.textLight} />
-              <Text style={styles.emptyTitle}>No Products Yet</Text>
-              <Text style={styles.emptySubtitle}>Add your first product to get started</Text>
-            </View>
+            // Show predefined products if no database products exist
+            <FlatList
+              data={predefinedProducts.slice(0, 4)}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => <RecommendedProductCard product={item} />}
+              scrollEnabled={false}
+            />
           ) : (
             <FlatList
               data={products.slice(0, 4)}

@@ -4,10 +4,12 @@
     "slug": "ritzyard-seller",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./src/assets/ritz.png",
     "scheme": "ritzyard-seller",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "splash": {
+      "image": "./src/assets/ritz.png",
       "resizeMode": "contain",
       "backgroundColor": "#C94F31"
     },
@@ -18,6 +20,10 @@
     "android": {
       "package": "com.ritzyard.seller",
       "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./src/assets/ritz.png",
+        "backgroundColor": "#C94F31"
+      },
       "edgeToEdgeEnabled": true,
       "permissions": [
         "INTERNET",
